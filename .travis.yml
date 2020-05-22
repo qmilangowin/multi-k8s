@@ -1,0 +1,27 @@
+sudo: required
+services:
+  - docker
+env:
+  global:
+    - SHA=$(git rev-parse HEAD)
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+before_install:
+  - openssl aes-256-cbc -K $encrypted_81c69d2dd293_key -iv $encrypted_81c69d2dd293_iv -in milan-gowin-personal-153de037b102.json.enc -out milan-gowin-personal-153de037b102.json -d
+  - curl https://sdk.cloud.google.com | bash > /dev/null;
+  - source $HOME/google-cloud-sdk/path.bash.inc
+  - gcloud components update kubectl
+  - gcloud auth activate-service-account --key-file milan-gowin-personal-153de037b102.json
+  - gcloud config set project milan-gowin-personal
+  - gcloud config set compute/zone europe-north1-a
+  - gcloud container clusters get-credentials cluster-1
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t milan320/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true milan320/docker-react npm run test -- --coverage
+ 
+deploy:
+  provider: script
+  script: bash ./deploy.sh
+  on:
+    branch: master
